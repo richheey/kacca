@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Pretendard', 'Plus Jakarta Sans', sans-serif;
+  background-color: #EDE8DF;
+  color: #1C1917;
+  -webkit-font-smoothing: antialiased;
+}
+
+html { scroll-behavior: smooth; }
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(28,25,23,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28,25,23,0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.grid-dark {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes modalSlide {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.modal-slide { animation: modalSlide 0.3s ease forwards; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #EDE8DF; }
+::-webkit-scrollbar-thumb { background: #C84B0F; border-radius: 3px; }
