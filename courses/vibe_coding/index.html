@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ============================================================
+       🔧 CONFIG — 여기만 수정하면 전체 페이지가 바뀝니다
+  ============================================================ -->
+  <script>
+    const CONFIG = {
+      courseBadge:   "한국AI창의융합협회 공식 과정",
+      schedule:      "주 2회 · 총 4차시 · 회당 2시간",
+      totalHours:    "8시간",
+      weeks:         "2주",
+      priceOriginal: "320,000",
+      priceDiscount: "160,000",
+      discountLabel: "50% 특별 할인",
+      seatsTotal:    20,
+      seatsFilled:   14,
+      deadlineText:  "이번 기수 마감 임박",
+      linkKakao:     "https://pf.kakao.com/_kaccakr",
+      linkCafe:      "https://cafe.naver.com/kaccakr?tc=shared_link",
+      linkHome:      "http://kacca.kr",
+      metaTitle:     "KACCA 바이브코딩 2주 완성 캠프 | 한국AI창의융합협회",
+      metaDesc:      "코딩 문법 없이 AI로 2주 만에 라이브 웹앱 2개 완성. 공식 수료증 발급.",
+    };
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:    "#08080A",
+            surf:  "#111115",
+            card:  "#17171B",
+            bdr:   "#26262C",
+            mint:  "#00F592",
+            purp:  "#8B5CF6",
+            ink:   "#F4F4F5",
+            sub:   "#A1A1AA",
+            dim:   "#52525B",
+          },
+          fontFamily: {
+            sans: ["'Pretendard'","sans-serif"],
+            mono: ["'Fira Code'","monospace"],
+          },
+        }
+      }
+    };
+  </script>
+
+  <!-- 폰트만 로드 (Font Awesome 제거 → SVG 아이콘으로 교체) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Pretendard:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:#08080A;color:#A1A1AA;font-family:'Pretendard',sans-serif;overflow-x:hidden}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:#08080A}
+    ::-webkit-scrollbar-thumb{background:#26262C;border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:#00F592}
+
+    .grid-bg{
+      background-image:
+        linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);
+      background-size:44px 44px;
+    }
+    .glow-m{background:radial-gradient(circle,rgba(0,245,146,.09) 0%,transparent 68%)}
+    .glow-p{background:radial-gradient(circle,rgba(139,92,246,.07) 0%,transparent 68%)}
+
+    .neon{text-shadow:0 0 16px rgba(0,245,146,.5),0 0 40px rgba(0,245,146,.15)}
+    .neon-p{text-shadow:0 0 16px rgba(139,92,246,.5)}
+
+    .vibe-tag{
+      display:inline-block;padding:.25em .6em;border-radius:10px;
+      background:rgba(0,245,146,.07);border:1.5px solid rgba(0,245,146,.35);color:#00F592;
+    }
+
+    .ch{transition:border-color .22s,box-shadow .22s}
+    .ch:hover{border-color:rgba(0,245,146,.28);box-shadow:0 4px 24px -6px rgba(0,245,146,.09)}
+
+    .acc{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}
+    .acc.open{max-height:500px}
+
+    .seat-track{height:5px;border-radius:3px;background:#26262C;overflow:hidden}
+    .seat-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#00F592,#00c97a);transition:width .9s ease}
+
+    .rv{opacity:0;transform:translateY(16px);transition:opacity .48s ease,transform .48s ease}
+    .rv.on{opacity:1;transform:none}
+
+    /* 모바일 고정 CTA */
+    .m-cta{position:fixed;bottom:0;left:0;right:0;z-index:50;padding:10px 16px 16px;
+           background:rgba(8,8,10,.96);backdrop-filter:blur(16px);border-top:1px solid #26262C}
+    @media(min-width:640px){.m-cta{display:none}}
+  </style>
+</head>
+
+<body class="grid-bg antialiased">
+
+<!-- 글로우 -->
+<div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+  <div class="glow-m absolute -top-48 left-1/3 w-[700px] h-[700px] rounded-full -translate-x-1/2"></div>
+  <div class="glow-p absolute top-[55vh] right-0 w-[500px] h-[500px] rounded-full translate-x-1/3"></div>
+  <div class="glow-m absolute bottom-[15vh] left-0 w-[500px] h-[500px] rounded-full -translate-x-1/3"></div>
+</div>
+
+
+<!-- ══════════════════════════════
+     HEADER
+══════════════════════════════ -->
+<header class="sticky top-0 z-40 bg-surf/90 backdrop-blur-lg border-b border-bdr">
+  <div class="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+    <a id="hdr-logo" href="#" target="_blank"
+       class="font-black text-sm text-ink hover:opacity-70 transition-opacity flex items-center gap-2">
+      한국AI창의융합협회
+      <span class="font-mono text-[10px] text-mint bg-mint/10 border border-mint/20 px-1.5 py-0.5 rounded leading-none">kacca.kr</span>
+    </a>
+    <div class="flex items-center gap-2">
+      <a id="hdr-cafe" href="#" target="_blank"
+         class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-bdr bg-surf hover:bg-bdr text-sub transition-all">
+        카페
+      </a>
+      <a id="hdr-kakao" href="#" target="_blank"
+         class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black bg-mint text-bg hover:scale-105 active:scale-95 transition-all shadow-[0_2px_12px_rgba(0,245,146,.3)]">
+        💬 카카오 문의
+      </a>
+    </div>
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════
+     HERO
+══════════════════════════════ -->
+<section class="relative pt-16 pb-24 md:pt-24 md:pb-32 z-10">
+  <div class="max-w-2xl mx-auto px-5 text-center">
+
+    <div id="hero-badge"
+         class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold
+                tracking-widest uppercase bg-mint/10 text-mint border border-mint/20 mb-7">
+    </div>
+
+    <h1 class="text-[2.7rem] sm:text-5xl md:text-[3.5rem] font-black tracking-tight leading-[1.15] mb-5 text-ink">
+      코딩 문법 대신,<br>
+      <span class="vibe-tag neon">#바이브코딩</span>으로<br>
+      <span class="bg-gradient-to-r from-ink via-mint to-purp bg-clip-text text-transparent">
+        상상을 완벽한 웹앱으로.
+      </span>
+    </h1>
+
+    <p class="text-base text-sub leading-relaxed mb-8 max-w-sm mx-auto">
+      에러 메시지 없이.<br>
+      문법 암기 없이.<br>
+      <strong class="text-ink font-semibold">오직 내 아이디어만으로.</strong>
+    </p>
+
+    <!-- 수치 뱃지 -->
+    <div class="flex items-center justify-center gap-2.5 flex-wrap mb-8">
+      <span class="px-3.5 py-1.5 rounded-lg bg-card border border-bdr text-xs font-bold text-sub font-mono">
+        <span id="badge-weeks" class="text-mint font-black"></span> 완성
+      </span>
+      <span class="px-3.5 py-1.5 rounded-lg bg-card border border-bdr text-xs font-bold text-sub font-mono">
+        웹앱 <span class="text-mint font-black">2개</span> 획득
+      </span>
+      <span class="px-3.5 py-1.5 rounded-lg bg-card border border-bdr text-xs font-bold text-sub font-mono">
+        공식 <span class="text-mint font-black">수료증</span> 발급
+      </span>
+    </div>
+
+    <!-- CTA -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a id="hero-cta" href="#" target="_blank"
+         class="w-full sm:w-auto px-8 py-4 rounded-xl font-black text-sm bg-mint text-bg
+                shadow-[0_8px_32px_-8px_rgba(0,245,146,.5)] hover:scale-105 active:scale-95
+                transition-all flex items-center justify-center gap-2">
+        🎓 수강 신청하기
+      </a>
+      <a id="hero-kakao" href="#" target="_blank"
+         class="w-full sm:w-auto px-8 py-4 rounded-xl border border-bdr hover:border-yellow-500/40
+                bg-card text-sub hover:text-yellow-200 text-sm font-bold
+                flex items-center justify-center gap-2 transition-all">
+        💬 카카오로 문의
+      </a>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     훅 1 — 시대/FOMO
+     (원 훅04 → 1번으로)
+══════════════════════════════ -->
+<section class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5 rv">
+    <div class="p-7 rounded-2xl bg-surf border border-bdr ch">
+      <h2 class="text-2xl sm:text-3xl font-black text-ink leading-tight mb-4">
+        지금 이 순간에도<br>
+        누군가는 AI로 사이트를 올려<br>
+        <span class="text-mint neon">수익을 내고 있습니다.</span>
+      </h2>
+      <p class="text-sm text-sub leading-relaxed mb-6">
+        코딩을 배운 사람이 아닙니다.<br>
+        <strong class="text-ink">아이디어와 AI만으로 만드는 사람입니다.</strong><br>
+        바이브코딩은 이미 시작된 흐름입니다.<br>
+        아직 모르고 있다면, 지금이 탑승할 마지막 타이밍입니다.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <span class="px-3 py-1.5 rounded-full bg-[#1a1600] border border-yellow-500/20 text-yellow-400 text-xs font-bold font-mono">Claude</span>
+        <span class="px-3 py-1.5 rounded-full bg-[#00102a] border border-blue-500/20 text-blue-400 text-xs font-bold font-mono">Gemini</span>
+        <span class="px-3 py-1.5 rounded-full bg-[#1a0010] border border-pink-500/20 text-pink-400 text-xs font-bold font-mono">Lovable</span>
+        <span class="px-3 py-1.5 rounded-full bg-card border border-bdr text-dim text-xs font-mono">
+          지금 누군가 사용 중 <span class="text-mint">●</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     훅 2 — 소유감
+     (원 훅03 → 2번으로)
+══════════════════════════════ -->
+<section class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5 rv">
+    <div class="p-7 rounded-2xl bg-surf border border-bdr ch relative overflow-hidden">
+      <div class="glow-p absolute bottom-0 left-0 w-48 h-48 rounded-full pointer-events-none -translate-x-1/2 translate-y-1/2"></div>
+      <h2 class="text-2xl sm:text-3xl font-black text-ink leading-tight mb-4">
+        외주 견적서,<br>
+        다시는 받지<br>
+        <span class="neon-p" style="color:#a78bfa">않아도 됩니다.</span>
+      </h2>
+      <!-- 외주 영수증 -->
+      <div class="mb-6 p-4 rounded-xl bg-bg border border-bdr font-mono text-xs space-y-2">
+        <div class="flex justify-between text-dim"><span>랜딩 페이지 제작</span><span class="line-through">₩800,000</span></div>
+        <div class="flex justify-between text-dim"><span>반응형 웹 개발</span><span class="line-through">₩1,500,000</span></div>
+        <div class="flex justify-between text-dim"><span>API 연동 기능</span><span class="line-through">₩700,000</span></div>
+        <div class="border-t border-bdr pt-2 flex justify-between"><span class="text-sub font-bold">외주 합계</span><span class="text-sub line-through">₩3,000,000+</span></div>
+        <div class="bg-mint/8 border border-mint/25 rounded-lg px-3 py-2 flex justify-between mt-1">
+          <span class="text-mint font-bold">KACCA 수강료</span>
+          <span id="receipt-price" class="text-mint font-black"></span>
+        </div>
+      </div>
+      <p class="text-sm text-sub leading-relaxed">
+        2주 후, 이 모든 기능을 직접 만들 수 있게 됩니다.<br>
+        <strong class="text-ink">아이디어가 있다면 이제 혼자서도 충분합니다.</strong>
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     훅 3 — 속도
+     (원 훅02 → 3번으로)
+══════════════════════════════ -->
+<section class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5 rv">
+    <div class="p-7 rounded-2xl bg-surf border border-bdr ch">
+      <h2 class="text-2xl sm:text-3xl font-black text-ink leading-tight mb-4">
+        첫 수업이 끝나면<br>
+        <span class="text-mint neon">당신의 URL이 생깁니다.</span>
+      </h2>
+      <p class="text-sm text-sub leading-relaxed mb-6">
+        6개월 배워도 결과물이 없는 학원이 아닙니다.<br>
+        <strong class="text-ink">수업 2시간 만에 전 세계가 볼 수 있는<br>내 사이트가 라이브로 올라갑니다.</strong>
+      </p>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-mint/10 text-mint border border-mint/25 flex items-center justify-center text-[11px] font-black font-mono shrink-0">1h</span>
+          <div>
+            <p class="text-sm font-bold text-ink">한글로 아이디어 기획</p>
+            <p class="text-xs text-dim mt-0.5">AI가 알아듣는 명세서 작성</p>
+          </div>
+        </div>
+        <div class="w-px h-4 bg-bdr ml-4"></div>
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-full bg-mint/10 text-mint border border-mint/25 flex items-center justify-center text-[11px] font-black font-mono shrink-0">2h</span>
+          <div>
+            <p class="text-sm font-bold text-mint">라이브 사이트 완성 🎉</p>
+            <p class="text-xs text-dim mt-0.5">실제 URL로 전 세계 배포 완료</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     훅 4 — 해방감
+     (원 훅01 → 4번으로)
+══════════════════════════════ -->
+<section class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5 rv">
+    <div class="p-7 rounded-2xl bg-surf border border-bdr ch relative overflow-hidden">
+      <div class="glow-m absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none translate-x-1/2 -translate-y-1/2"></div>
+      <h2 class="text-2xl sm:text-3xl font-black text-ink leading-tight mb-4">
+        까만 화면에<br>
+        빨간 에러를<br>
+        <span class="text-mint neon">본 적 있으신가요?</span>
+      </h2>
+      <p class="text-sm text-sub leading-relaxed mb-6">
+        그 순간 배우기를 포기했다면 — 당연한 겁니다.<br>
+        바이브코딩은 그 화면 자체가 없습니다.<br>
+        <strong class="text-ink">한글로 말하면, AI가 코드로 바꿉니다.</strong>
+      </p>
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div class="p-4 rounded-xl bg-bg border border-bdr">
+          <p class="text-dim font-bold mb-2 line-through">기존 코딩 학원</p>
+          <p class="text-sub leading-relaxed">문법 암기 → 에러 → 구글링 → 포기</p>
+        </div>
+        <div class="p-4 rounded-xl border border-mint/25 bg-mint/5">
+          <p class="text-mint font-bold mb-2">#바이브코딩</p>
+          <p class="text-sub leading-relaxed">한글 지시 → AI 생성 → 즉시 확인</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     PERSONAS — 크게, 구체적으로
+══════════════════════════════ -->
+<section id="target" class="py-20 border-t border-bdr bg-surf/30 z-10 relative">
+  <div class="max-w-3xl mx-auto px-5">
+
+    <!-- 타이틀 — 크고 강하게 -->
+    <div class="text-center mb-14 rv">
+      <p class="text-xs font-bold tracking-widest text-mint uppercase mb-3">Target Match</p>
+      <h2 class="text-4xl sm:text-5xl font-black text-ink leading-tight mb-4">
+        이런 분들을<br>위해 준비했습니다
+      </h2>
+      <p class="text-sm text-sub max-w-sm mx-auto leading-relaxed">
+        코딩 지식이 없더라도, AI 시대를 앞서가고 싶은 열정만 있다면<br>
+        정답은 바이브코딩입니다.
+      </p>
+    </div>
+
+    <!-- 3개 카드 -->
+    <div class="space-y-5">
+
+      <!-- 페르소나 A -->
+      <div class="p-7 rounded-2xl bg-surf border border-bdr ch rv">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-mint/10 border border-mint/20 flex items-center justify-center shrink-0 text-2xl">🎓</div>
+          <div>
+            <p class="text-xs font-bold text-mint uppercase tracking-wider mb-1">코딩을 모르는 순수 입문자</p>
+            <h3 class="text-xl font-black text-ink leading-tight">타자만 칠 줄 알아도<br>무조건 가능합니다</h3>
+          </div>
+        </div>
+        <p class="text-sm text-sub leading-relaxed mb-4">
+          "까만 화면에 복잡한 영어 에러 메시지만 마주하면 머리가 아프고 의지가 꺾였어요."<br><br>
+          바이브코딩 과정은 무의미한 영타 기입이나 구문 암기를 완벽히 탈피합니다.
+          오직 직관적인 한글 기획과 논리를 바탕으로 AI와 대화하며 자연스럽게 완성합니다.
+        </p>
+        <span class="inline-block text-xs font-black text-mint bg-mint/10 border border-mint/20 px-3 py-1.5 rounded-lg">
+          타자만 칠 줄 알아도 무조건 가능 ✓
+        </span>
+      </div>
+
+      <!-- 페르소나 B -->
+      <div class="p-7 rounded-2xl bg-surf border border-bdr ch rv">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-purp/10 border border-purp/20 flex items-center justify-center shrink-0 text-2xl">💰</div>
+          <div>
+            <p class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">내 아이디어를 웹/앱으로 만들 분</p>
+            <h3 class="text-xl font-black text-ink leading-tight">최저 비용,<br>최강의 기획 속도</h3>
+          </div>
+        </div>
+        <p class="text-sm text-sub leading-relaxed mb-4">
+          "나만의 비즈니스 모델이나 웹사이트를 만들고 싶은데 외주를 주자니 비용이 수백만 원에 달해 엄두가 나지 않아요."<br><br>
+          단 2주 만에 아이디어를 실물 서비스로 조립하여 실제 도메인으로 전 세계에 배포하고
+          트래픽 기반 비즈니스 성과를 빠르게 실험할 수 있습니다.
+        </p>
+        <span class="inline-block text-xs font-black text-purple-400 bg-purp/10 border border-purp/20 px-3 py-1.5 rounded-lg">
+          최저 비용, 최강의 기획 속도 ✓
+        </span>
+      </div>
+
+      <!-- 페르소나 C -->
+      <div class="p-7 rounded-2xl bg-surf border border-bdr ch rv">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-mint/10 border border-mint/20 flex items-center justify-center shrink-0 text-2xl">✨</div>
+          <div>
+            <p class="text-xs font-bold text-mint uppercase tracking-wider mb-1">AI 트렌드에 목마른 지식인</p>
+            <h3 class="text-xl font-black text-ink leading-tight">진정한 AI 지배력을<br>장착합니다</h3>
+          </div>
+        </div>
+        <p class="text-sm text-sub leading-relaxed mb-4">
+          "AI가 세상을 지배한다는데, 단순 챗봇 대화나 번역 수준에서 벗어나 실제 실무용 생산적 가치를 만들어 보고 싶어요."<br><br>
+          Claude, Gemini, Lovable 등 현업 최고 생산성 빌더들의 구동법과 차이를 체득하고,
+          다이내믹 웹 구현을 통해 진정한 AI 마스터로 빠르게 점프합니다.
+        </p>
+        <span class="inline-block text-xs font-black text-mint bg-mint/10 border border-mint/20 px-3 py-1.5 rounded-lg">
+          진정한 AI 지배력 장착 ✓
+        </span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     CURRICULUM
+══════════════════════════════ -->
+<section id="curriculum" class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5">
+    <div class="text-center mb-10 rv">
+      <p class="text-xs font-bold tracking-widest text-mint uppercase mb-2">Curriculum</p>
+      <h2 id="curr-title" class="text-2xl font-extrabold text-ink"></h2>
+      <p class="text-sm text-sub mt-2">각 차시를 탭해 상세 내용을 확인하세요</p>
+    </div>
+    <div id="curriculum-list" class="space-y-3"></div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     BENEFITS
+══════════════════════════════ -->
+<section id="benefits" class="py-16 border-t border-bdr bg-surf/20 z-10 relative">
+  <div class="max-w-2xl mx-auto px-5">
+    <div class="text-center mb-10 rv">
+      <p class="text-xs font-bold tracking-widest text-mint uppercase mb-2">Why KACCA</p>
+      <h2 class="text-2xl font-extrabold text-ink">이 캠프만의 것들</h2>
+    </div>
+    <div class="space-y-4">
+      <!-- 멀티 툴 -->
+      <div class="p-6 rounded-2xl bg-surf border border-bdr ch rv">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-mint/10 border border-mint/20 flex items-center justify-center shrink-0 text-xl">🧩</div>
+          <div>
+            <h3 class="font-bold text-ink text-base mb-2">멀티 AI 툴 하이브리드</h3>
+            <p class="text-sm text-sub leading-relaxed mb-3">Claude · Gemini · Lovable — 한 가지 툴에 갇히지 않고 상황에 맞게 결합합니다.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2.5 py-1 rounded-full bg-[#1a1600] border border-yellow-500/20 text-yellow-400 text-xs font-bold font-mono">Claude</span>
+              <span class="px-2.5 py-1 rounded-full bg-[#00102a] border border-blue-500/20 text-blue-400 text-xs font-bold font-mono">Gemini</span>
+              <span class="px-2.5 py-1 rounded-full bg-[#1a0010] border border-pink-500/20 text-pink-400 text-xs font-bold font-mono">Lovable</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="p-5 rounded-2xl bg-surf border border-bdr ch rv text-center">
+          <div class="text-3xl mb-3">🚀</div>
+          <h3 class="font-bold text-ink text-sm mb-1">라이브 웹앱 2개</h3>
+          <p class="text-xs text-sub leading-relaxed">실제 도메인으로 배포</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-surf border border-bdr ch rv text-center">
+          <div class="text-3xl mb-3">🏅</div>
+          <h3 class="font-bold text-ink text-sm mb-1">공식 수료증</h3>
+          <p class="text-xs text-sub leading-relaxed">협회 정식 발급</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-surf border border-bdr ch rv text-center">
+          <div class="text-3xl mb-3">☁️</div>
+          <h3 class="font-bold text-ink text-sm mb-1">무료 호스팅</h3>
+          <p class="text-xs text-sub leading-relaxed">Netlify·Vercel 평생 무료</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-surf border border-bdr ch rv text-center">
+          <div class="text-3xl mb-3">🤝</div>
+          <h3 class="font-bold text-ink text-sm mb-1">커뮤니티</h3>
+          <p class="text-xs text-sub leading-relaxed">수료 후 평생 참여</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     FAQ + PRICING
+══════════════════════════════ -->
+<section id="faq" class="py-16 border-t border-bdr z-10 relative">
+  <div class="max-w-2xl mx-auto px-5">
+    <div class="text-center mb-10 rv">
+      <p class="text-xs font-bold tracking-widest text-mint uppercase mb-2">FAQ & Pricing</p>
+      <h2 class="text-2xl font-extrabold text-ink">자주 묻는 질문</h2>
+    </div>
+
+    <div id="faq-list" class="space-y-3 mb-10"></div>
+
+    <!-- 가격 카드 -->
+    <div id="pricing" class="rv">
+      <div class="rounded-2xl bg-surf border-2 border-mint/30 shadow-[0_0_40px_rgba(0,245,146,.07)] overflow-hidden">
+        <div class="bg-gradient-to-r from-mint to-teal-400 text-bg text-xs font-black py-3 text-center tracking-widest uppercase">
+          🔥 수강생 모집 중 — 선착순 마감
+        </div>
+        <div class="py-8 px-6 text-center border-b border-bdr relative">
+          <span id="price-badge" class="absolute top-4 right-4 bg-red-500 text-white text-[11px] font-black px-3 py-1 rounded-full"></span>
+          <p id="price-original" class="text-sm text-dim line-through mb-1"></p>
+          <p id="price-val" class="text-5xl font-black text-mint tracking-tight leading-none"></p>
+          <p id="price-schedule" class="text-xs text-sub mt-3 font-semibold"></p>
+        </div>
+        <div class="py-5 px-6 space-y-3.5">
+          <div class="flex items-center gap-3"><span class="text-mint font-black text-base">✓</span><span class="text-sm text-sub font-medium">주 2회 집중 오프라인 수업 (총 8시간)</span></div>
+          <div class="flex items-center gap-3"><span class="text-mint font-black text-base">✓</span><span class="text-sm text-sub font-medium">프롬프트 가이드라인 제공</span></div>
+          <div class="flex items-center gap-3"><span class="text-mint font-black text-base">✓</span><span class="text-sm text-sub font-medium">한국AI창의융합협회 공식 수료증 발급</span></div>
+          <div class="flex items-center gap-3"><span class="text-mint font-black text-base">✓</span><span class="text-sm text-sub font-medium">수료 후 크리에이터 커뮤니티 평생 참여</span></div>
+          <div class="flex items-center gap-3"><span class="text-mint font-black text-base">✓</span><span class="text-sm text-sub font-medium">강의 보조 자료집 증정</span></div>
+        </div>
+        <div class="px-6 pb-6">
+          <a id="price-cta" href="#" target="_blank"
+             class="w-full py-4 rounded-xl font-black text-base bg-gradient-to-r from-mint to-teal-400
+                    text-bg shadow-[0_6px_20px_-4px_rgba(0,245,146,.4)] hover:scale-[1.02]
+                    active:scale-95 transition-all flex items-center justify-center gap-2">
+            🎓 수강 신청하기
+          </a>
+        </div>
+        <div class="py-3 text-center text-[11px] text-dim bg-bg/40">주최 : 한국AI창의융합협회</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════
+     FINAL CTA
+══════════════════════════════ -->
+<section class="py-20 border-t border-bdr z-10 relative overflow-hidden">
+  <div class="glow-m absolute inset-0 opacity-40 pointer-events-none"></div>
+  <div class="max-w-lg mx-auto px-5 text-center relative z-10 rv">
+    <p class="text-xs font-bold tracking-widest text-mint uppercase mb-4">마지막 기회</p>
+    <h2 class="text-2xl sm:text-3xl font-black text-ink mb-3 leading-tight">
+      지금 신청하지 않으면<br>
+      <span class="text-mint neon">다음 기수까지 기다려야 합니다</span>
+    </h2>
+    <p class="text-sm text-sub mb-7">코딩 없이. 외주 없이. AI가 당신의 손이 됩니다.</p>
+    <a id="final-cta" href="#" target="_blank"
+       class="inline-flex items-center gap-2 px-9 py-4 rounded-xl font-black text-sm bg-mint text-bg
+              shadow-[0_10px_36px_-8px_rgba(0,245,146,.5)] hover:scale-105 active:scale-95 transition-all">
+      🚀 지금 바로 신청하기
+    </a>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer class="py-7 border-t border-bdr text-center text-[11px] text-dim">
+  <p class="font-semibold text-sub/70 mb-1">© 한국AI창의융합협회 Vibe Coding Camp</p>
+  <p>본 과정은 한국AI창의융합협회 연구진과 함께 설계 및 검증되었습니다.</p>
+</footer>
+
+<!-- 모바일 고정 CTA -->
+<div class="m-cta">
+  <a id="mobile-cta" href="#" target="_blank"
+     class="block w-full py-3.5 rounded-xl font-black text-sm bg-mint text-bg text-center
+            shadow-[0_4px_20px_-4px_rgba(0,245,146,.4)]">
+    🎓 수강 신청하기
+  </a>
+</div>
+
+<!-- 플로팅 버튼 -->
+<div class="fixed bottom-20 sm:bottom-6 right-4 z-50 flex flex-col gap-2">
+  <a id="float-cafe" href="#" target="_blank"
+     class="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center text-lg shadow-xl hover:scale-110 transition-all">☕</a>
+  <a id="float-kakao" href="#" target="_blank"
+     class="w-10 h-10 rounded-full bg-yellow-400 text-[#191919] flex items-center justify-center text-lg shadow-xl hover:scale-110 transition-all">💬</a>
+</div>
+
+
+<!-- ══════════════════════════════
+     RUNTIME SCRIPT
+══════════════════════════════ -->
+<script>
+/* ── 링크 주입 ── */
+document.getElementById("hdr-logo").href = CONFIG.linkHome;
+document.getElementById("hdr-cafe").href = CONFIG.linkCafe;
+document.getElementById("float-cafe").href = CONFIG.linkCafe;
+["hdr-kakao","hero-cta","hero-kakao","price-cta","final-cta","mobile-cta","float-kakao"]
+  .forEach(id => document.getElementById(id).href = CONFIG.linkKakao);
+
+/* ── 텍스트 주입 ── */
+document.getElementById("hero-badge").innerHTML =
+  `✨ ${CONFIG.courseBadge}`;
+document.getElementById("badge-weeks").textContent = CONFIG.weeks;
+document.getElementById("curr-title").textContent =
+  `${CONFIG.weeks} (총 ${CONFIG.totalHours}) 커리큘럼`;
+document.getElementById("receipt-price").textContent = `₩${CONFIG.priceDiscount}`;
+
+
+
+/* ── 가격 ── */
+document.getElementById("price-badge").textContent    = CONFIG.discountLabel;
+document.getElementById("price-original").textContent = `₩${CONFIG.priceOriginal}`;
+document.getElementById("price-val").textContent      = `₩${CONFIG.priceDiscount}`;
+document.getElementById("price-schedule").textContent = CONFIG.schedule;
+
+/* ────────────────────────────────
+   커리큘럼 데이터
+──────────────────────────────── */
+const CURRICULUM = [
+  { badge:"1차시 (2시간)", color:"mint",
+    title:"코드 없이 화면 설계하기",
+    tool:"Claude, Gemini Canvas",
+    body:"HTML/CSS를 직관적으로 이해하고, AI가 한 번에 화면을 만들어낼 수 있는 한글 명세 기획안을 작성합니다.",
+    out:"아이디어 → 10분 내 레이아웃 완성" },
+  { badge:"2차시 (2시간)", color:"mint",
+    title:"나만의 웹사이트 완성",
+    tool:"Lovable, AI 디자인 에셋",
+    body:"색상·폰트·이미지를 내 취향으로 커스텀하고, 모바일·데스크탑 반응형 웹을 완성합니다.",
+    out:"[산출물 1] 맞춤형 소개 웹사이트 라이브" },
+  { badge:"3차시 (2시간)", color:"purple",
+    title:"살아 움직이는 API 연동",
+    tool:"Claude API, 공공데이터",
+    body:"날씨·지도 등 실시간 외부 데이터를 연동해 정적 사이트에 두뇌를 이식합니다.",
+    out:"실시간 데이터가 작동하는 다이내믹 앱" },
+  { badge:"4차시 (2시간)", color:"purple",
+    title:"무료 배포 + 수료증",
+    tool:"Netlify, Vercel",
+    body:"전 세계에 무료 론칭하고, QR코드로 모바일 검증 후 공식 수료증을 받습니다.",
+    out:"[산출물 2] API 탑재 웹앱 배포 + 수료 완료" },
+];
+
+const cl = document.getElementById("curriculum-list");
+CURRICULUM.forEach((item, i) => {
+  const m  = item.color === "mint";
+  const bc = m ? "bg-mint/10 text-mint" : "bg-purp/10 text-purple-400";
+  const ic = m ? "text-mint" : "text-purple-400";
+  const oc = m ? "border-mint/20 bg-mint/5" : "border-purp/20 bg-purp/5";
+  cl.innerHTML += `
+    <div class="border border-bdr rounded-xl bg-surf overflow-hidden ch rv">
+      <button onclick="tA(${i})"
+              class="w-full px-5 py-4 text-left flex items-center justify-between gap-3 focus:outline-none">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-[11px] font-black px-2.5 py-1 rounded w-fit ${bc}">${item.badge}</span>
+          <span class="text-sm font-extrabold text-ink">${item.title}</span>
+        </div>
+        <span id="ai-${i}" class="${ic} text-sm transition-transform duration-300 inline-block">▼</span>
+      </button>
+      <div id="ac-${i}" class="acc border-t border-bdr/60 bg-bg/40">
+        <div class="px-5 py-4 space-y-3">
+          <p class="text-sm text-sub leading-relaxed">${item.body}</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-surf p-3 rounded-lg border border-bdr">
+              <span class="${ic} font-bold block mb-1">🛠 도구</span>
+              <span class="text-sub">${item.tool}</span>
+            </div>
+            <div class="p-3 rounded-lg border ${oc}">
+              <span class="${ic} font-black block mb-1">⭐ 아웃풋</span>
+              <span class="text-sub">${item.out}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+});
+
+/* ────────────────────────────────
+   FAQ 데이터
+──────────────────────────────── */
+const FAQS = [
+  { q:"코딩을 전혀 몰라도 되나요?",
+    a:"네. 타자만 칠 줄 알면 됩니다. 문법 암기 없이 한글로 AI에게 지시하는 방식으로만 진행됩니다." },
+  { q:"툴 사용료가 따로 드나요?",
+    a:"수업 중에는 모든 플랫폼의 무료 플랜을 활용합니다. 수강비 외 추가 비용은 없습니다." },
+  { q:"배포 후 사이트 유지비는?",
+    a:"Netlify·Vercel은 일정 트래픽까지 영구 무료입니다. 추가 비용 없이 평생 라이브 유지됩니다." },
+  { q:"오프라인 수업인가요?",
+    a:"카카오 채널로 문의 주시면 현재 기수 일정과 장소를 안내드립니다." },
+];
+
+const fl = document.getElementById("faq-list");
+FAQS.forEach((item, i) => {
+  fl.innerHTML += `
+    <div class="border border-bdr rounded-xl bg-surf overflow-hidden">
+      <button onclick="tF(${i})"
+              class="w-full px-5 py-4 text-left flex items-start justify-between gap-3
+                     text-sm font-semibold text-sub hover:text-mint transition-colors focus:outline-none">
+        <span>Q. ${item.q}</span>
+        <span id="fi-${i}" class="text-dim shrink-0 mt-0.5 transition-transform duration-300 text-sm inline-block">▼</span>
+      </button>
+      <div id="fa-${i}" class="acc border-t border-bdr/60 bg-bg/40">
+        <p class="px-5 py-4 text-sm text-sub leading-relaxed">${item.a}</p>
+      </div>
+    </div>`;
+});
+
+/* ── 토글 ── */
+function tA(i) {
+  document.getElementById(`ac-${i}`).classList.toggle("open");
+  const icon = document.getElementById(`ai-${i}`);
+  icon.style.transform = icon.style.transform === "rotate(180deg)" ? "" : "rotate(180deg)";
+}
+function tF(i) {
+  document.getElementById(`fa-${i}`).classList.toggle("open");
+  const icon = document.getElementById(`fi-${i}`);
+  icon.style.transform = icon.style.transform === "rotate(180deg)" ? "" : "rotate(180deg)";
+}
+
+/* ── 스크롤 reveal ── */
+const io = new IntersectionObserver(es => {
+  es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("on"); io.unobserve(e.target); } });
+}, { threshold: 0.06 });
+document.querySelectorAll(".rv").forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
