@@ -386,12 +386,401 @@ export default function AdminPage() {
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'programs' && <ProgramsManager toast={showToast} />}
         {tab === 'settings' && <SettingsManager toast={showToast} />}
-        {tab === 'instructors' && <div style={{ ...card }}><h2 style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 900, marginBottom: 8 }}>강사 관리</h2><p style={{ color: '#78716C', fontFamily: 'Pretendard, sans-serif' }}>ProgramsManager와 동일한 패턴으로 Supabase instructors 컬렉션과 연동해 구현하세요.</p></div>}
-        {tab === 'reviews' && <div style={{ ...card }}><h2 style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 900, marginBottom: 8 }}>후기 관리</h2><p style={{ color: '#78716C', fontFamily: 'Pretendard, sans-serif' }}>ProgramsManager와 동일한 패턴으로 Supabase testimonials 컬렉션과 연동해 구현하세요.</p></div>}
-        {tab === 'contacts' && <div style={{ ...card }}><h2 style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 900, marginBottom: 8 }}>문의 내역</h2><p style={{ color: '#78716C', fontFamily: 'Pretendard, sans-serif' }}>Supabase contacts 컬렉션에서 읽기 전용으로 조회하세요.</p></div>}
+        {tab === 'instructors' && <InstructorsManager toast={showToast} />}
+        {tab === 'reviews' && <ReviewsManager toast={showToast} />}
+        {tab === 'contacts' && <ContactsManager />}
       </main>
 
       <Toast msg={toastMsg} />
+    </div>
+  )
+}
+
+// ── 강사 관리 ──────────────────────────────────
+function InstructorsManager({ toast }: { toast: (m: string) => void }) {
+  const [instructors, setInstructors] = useState<Instructor[]>(fallbackInstructors)
+  const [editing, setEditing] = useState<Partial<Instructor> | null>(null)
+
+  useEffect(() => {
+    supabase.from('instructors').select('*').order('order').then(({ data }) => {
+      if (data && data.length > 0) setInstructors(data)
+    })
+  }, [])
+
+  const openForm = (inst: Instructor | null) => {
+    setEditing(inst ? { ...inst } : {})
+  }
+
+  const save = async () => {
+    if (!editing) return
+    const data = {
+      name: editing.name || '',
+      title: editing.title || '',
+      initial: editing.initial || (editing.name || '').charAt(0),
+      gradient_from: editing.gradient_from || '#C84B0F',
+      gradient_to: editing.gradient_to || '#F5B730',
+      tags: typeof editing.tags === 'string'
+        ? (editing.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean)
+        : editing.tags || [],
+      intro: editing.intro || '',
+      bio: editing.bio || '',
+      career: typeof editing.career === 'string'
+        ? (editing.career as string).split('\n').filter(Boolean)
+        : editing.career || [],
+      certifications: typeof editing.certifications === 'string'
+        ? (editing.certifications as string).split('\n').filter(Boolean)
+        : editing.certifications || [],
+      course_ids: editing.course_ids || [],
+      order: editing.order || instructors.length + 1,
+    }
+    if (editing.id) {
+      await supabase.from('instructors').update(data).eq('id', editing.id)
+      toast('✓ 강사 정보가 수정되었습니다')
+    } else {
+      await supabase.from('instructors').insert(data)
+      toast('✓ 강사가 추가되었습니다')
+    }
+    const { data: updated } = await supabase.from('instructors').select('*').order('order')
+    if (updated) setInstructors(updated)
+    setEditing(null)
+  }
+
+  const del = async (id: string) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    await supabase.from('instructors').delete().eq('id', id)
+    setInstructors(p => p.filter(x => x.id !== id))
+    toast('삭제되었습니다')
+  }
+
+  const colorOptions = [
+    { label: '오렌지-앰버', from: '#C84B0F', to: '#F5B730' },
+    { label: '블랙-오렌지', from: '#1C1917', to: '#C84B0F' },
+    { label: '앰버-그레이', from: '#F5B730', to: '#78716C' },
+    { label: '골드-오렌지', from: '#F5B730', to: '#C84B0F' },
+  ]
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 900, marginBottom: 3, fontFamily: 'Pretendard, sans-serif' }}>강사 관리</h2>
+          <p style={{ color: '#78716C', fontSize: 12, fontFamily: 'Pretendard, sans-serif' }}>강사를 추가·수정·삭제할 수 있습니다</p>
+        </div>
+        <button style={btnO} onClick={() => openForm(null)}>+ 새 강사 추가</button>
+      </div>
+
+      {editing !== null && (
+        <div style={{ ...card, marginBottom: 14, borderLeft: '3px solid #C84B0F' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontWeight: 700, fontSize: 13, fontFamily: 'Pretendard, sans-serif' }}>
+              {editing.id ? `강사 수정 — ${editing.name}` : '새 강사 추가'}
+            </span>
+            <button style={{ ...btnG, fontSize: 11, padding: '5px 12px' }} onClick={() => setEditing(null)}>✕ 닫기</button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={lbl}>이름 *</label>
+              <input style={inp} value={editing.name || ''} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} placeholder="홍OO 강사" />
+            </div>
+            <div>
+              <label style={lbl}>직함</label>
+              <input style={inp} value={editing.title || ''} onChange={e => setEditing(p => ({ ...p, title: e.target.value }))} placeholder="AI 교육 전문가" />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={lbl}>이니셜 (최대 2자)</label>
+              <input style={inp} maxLength={2} value={editing.initial || ''} onChange={e => setEditing(p => ({ ...p, initial: e.target.value }))} placeholder="홍" />
+            </div>
+            <div>
+              <label style={lbl}>아바타 색상</label>
+              <select style={{ ...inp, cursor: 'pointer' }}
+                value={`${editing.gradient_from || '#C84B0F'},${editing.gradient_to || '#F5B730'}`}
+                onChange={e => {
+                  const [from, to] = e.target.value.split(',')
+                  setEditing(p => ({ ...p, gradient_from: from, gradient_to: to }))
+                }}>
+                {colorOptions.map(c => (
+                  <option key={c.label} value={`${c.from},${c.to}`}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>전문 분야 태그 (쉼표로 구분)</label>
+            <input style={inp}
+              value={Array.isArray(editing.tags) ? editing.tags.join(', ') : editing.tags || ''}
+              onChange={e => setEditing(p => ({ ...p, tags: e.target.value as any }))}
+              placeholder="생성형AI, 교사연수, AI리터러시" />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>한 줄 소개</label>
+            <input style={inp} value={editing.intro || ''} onChange={e => setEditing(p => ({ ...p, intro: e.target.value }))} placeholder="강사 소개를 한 줄로 입력하세요" />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>강사 소개 (전문)</label>
+            <textarea style={{ ...inp, resize: 'none' }} rows={3} value={editing.bio || ''} onChange={e => setEditing(p => ({ ...p, bio: e.target.value }))} placeholder="강사의 상세 소개를 입력하세요" />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <label style={lbl}>주요 경력 (줄바꿈으로 구분)</label>
+            <textarea style={{ ...inp, resize: 'none' }} rows={3}
+              value={Array.isArray(editing.career) ? editing.career.join('\n') : editing.career || ''}
+              onChange={e => setEditing(p => ({ ...p, career: e.target.value as any }))}
+              placeholder={'2020~2024  OO기관 근무\n2026~현재  한국AI창의융합협회 강사'} />
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>자격 & 수상 (줄바꿈으로 구분)</label>
+            <textarea style={{ ...inp, resize: 'none' }} rows={2}
+              value={Array.isArray(editing.certifications) ? editing.certifications.join('\n') : editing.certifications || ''}
+              onChange={e => setEditing(p => ({ ...p, certifications: e.target.value as any }))}
+              placeholder={'자격증명 (취득연도)\n수상내역 (연도)'} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={btnO} onClick={save}>저장하기</button>
+            <button style={btnG} onClick={() => setEditing(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {instructors.map(inst => {
+          const cv = [inst.gradient_from, inst.gradient_to]
+          return (
+            <div key={inst.id} style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, minWidth: 48, borderRadius: '50%', background: `linear-gradient(135deg,${cv[0]},${cv[1]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900, fontFamily: 'Pretendard, sans-serif' }}>
+                {inst.initial}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 700, fontSize: 13, color: '#1C1917', marginBottom: 2, fontFamily: 'Pretendard, sans-serif' }}>{inst.name}</p>
+                <p style={{ color: '#78716C', fontSize: 11, marginBottom: 6, fontFamily: 'Pretendard, sans-serif' }}>{inst.title}</p>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {(inst.tags || []).map(t => (
+                    <span key={t} style={{ background: '#fff0eb', color: '#C84B0F', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, fontFamily: 'Pretendard, sans-serif' }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 42 }}>
+                <button onClick={() => openForm(inst)} style={{ background: '#EDE8DF', color: '#C84B0F', border: 'none', padding: '5px 10px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 10 }}>수정</button>
+                <button onClick={() => del(inst.id)} style={{ background: 'transparent', color: '#dc2626', border: 'none', padding: '5px 10px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 10 }}>삭제</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── 후기 관리 ──────────────────────────────────
+function ReviewsManager({ toast }: { toast: (m: string) => void }) {
+  const [reviews, setReviews] = useState<Testimonial[]>([])
+  const [form, setForm] = useState({ name: '', affiliation: '', rating: 5, content: '', course_title: '' })
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    supabase.from('testimonials').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data) setReviews(data)
+    })
+  }, [])
+
+  const save = async () => {
+    if (!form.name || !form.content) { alert('이름과 후기 내용을 입력해주세요'); return }
+    await supabase.from('testimonials').insert(form)
+    const { data } = await supabase.from('testimonials').select('*').order('created_at', { ascending: false })
+    if (data) setReviews(data)
+    setForm({ name: '', affiliation: '', rating: 5, content: '', course_title: '' })
+    setAdding(false)
+    toast('✓ 후기가 저장되었습니다')
+  }
+
+  const del = async (id: string) => {
+    if (!confirm('삭제하시겠습니까?')) return
+    await supabase.from('testimonials').delete().eq('id', id)
+    setReviews(r => r.filter(x => x.id !== id))
+    toast('삭제되었습니다')
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 900, marginBottom: 3, fontFamily: 'Pretendard, sans-serif' }}>후기 관리</h2>
+          <p style={{ color: '#78716C', fontSize: 12, fontFamily: 'Pretendard, sans-serif' }}>수강 후기를 추가·삭제할 수 있습니다</p>
+        </div>
+        <button style={btnO} onClick={() => setAdding(!adding)}>+ 후기 추가</button>
+      </div>
+
+      {adding && (
+        <div style={{ ...card, marginBottom: 14, borderLeft: '3px solid #C84B0F' }}>
+          <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, fontFamily: 'Pretendard, sans-serif' }}>새 후기 추가</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div><label style={lbl}>이름 *</label><input style={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="김○○ 선생님" /></div>
+            <div><label style={lbl}>소속·직함</label><input style={inp} value={form.affiliation} onChange={e => setForm(f => ({ ...f, affiliation: e.target.value }))} placeholder="초등교사 | 강의명 수강" /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={lbl}>별점</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.rating} onChange={e => setForm(f => ({ ...f, rating: +e.target.value }))}>
+                {[5, 4, 3, 2, 1].map(v => <option key={v} value={v}>{v}점</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>수강 강의</label>
+              <input style={inp} value={form.course_title} onChange={e => setForm(f => ({ ...f, course_title: e.target.value }))} placeholder="AI는 처음입니다만" />
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={lbl}>후기 내용 *</label>
+            <textarea style={{ ...inp, resize: 'none' }} rows={3} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="수강생 후기 내용을 입력하세요" />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={btnO} onClick={save}>저장</button>
+            <button style={btnG} onClick={() => setAdding(false)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {reviews.length === 0 && (
+          <div style={{ ...card, textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>💬</div>
+            <p style={{ fontWeight: 700, color: '#1C1917', marginBottom: 4, fontFamily: 'Pretendard, sans-serif' }}>등록된 후기가 없습니다</p>
+            <p style={{ color: '#78716C', fontSize: 12, fontFamily: 'Pretendard, sans-serif' }}>위 버튼을 눌러 첫 후기를 추가해보세요</p>
+          </div>
+        )}
+        {reviews.map(r => (
+          <div key={r.id} style={{ ...card, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#1C1917', fontFamily: 'Pretendard, sans-serif' }}>{r.name}</span>
+                <span style={{ color: '#78716C', fontSize: 11, fontFamily: 'Pretendard, sans-serif' }}>{r.affiliation}</span>
+                <span style={{ color: '#F5B730', fontSize: 11 }}>{'⭐'.repeat(r.rating)}</span>
+              </div>
+              <p style={{ color: '#1C1917', fontSize: 12, lineHeight: 1.6, fontFamily: 'Pretendard, sans-serif' }}>{r.content}</p>
+              {r.course_title && <p style={{ color: '#78716C', fontSize: 11, marginTop: 4, fontFamily: 'Pretendard, sans-serif' }}>강의: {r.course_title}</p>}
+            </div>
+            <button onClick={() => del(r.id)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, flexShrink: 0, fontFamily: 'Pretendard, sans-serif' }}>삭제</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── 문의 내역 ──────────────────────────────────
+function ContactsManager() {
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [filter, setFilter] = useState('전체')
+  const [selected, setSelected] = useState<Contact | null>(null)
+
+  const load = async (f: string) => {
+    const q = supabase.from('contacts').select('*').order('created_at', { ascending: false })
+    const { data } = f === '전체' ? await q : await q.eq('status', f)
+    setContacts(data || [])
+  }
+
+  useEffect(() => { load('전체') }, [])
+
+  const changeStatus = async (id: string, status: string) => {
+    await supabase.from('contacts').update({ status }).eq('id', id)
+    load(filter)
+    if (selected?.id === id) setSelected(prev => prev ? { ...prev, status: status as any } : null)
+  }
+
+  const filters = ['전체', '미확인', '확인', '답변완료']
+  const statusColor: Record<string, { bg: string; color: string }> = {
+    '미확인': { bg: '#fee2e2', color: '#dc2626' },
+    '확인': { bg: '#fff0eb', color: '#C84B0F' },
+    '답변완료': { bg: '#dcfce7', color: '#16a34a' },
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 900, marginBottom: 3, fontFamily: 'Pretendard, sans-serif' }}>문의 내역</h2>
+      <p style={{ color: '#78716C', fontSize: 12, marginBottom: 14, fontFamily: 'Pretendard, sans-serif' }}>접수된 문의를 확인하고 상태를 변경할 수 있습니다</p>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {filters.map(f => (
+          <button key={f} onClick={() => { setFilter(f); load(f) }}
+            style={{ background: filter === f ? '#0B0A09' : '#EDE8DF', color: filter === f ? '#FAF7F2' : '#1C1917', border: 'none', padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 11 }}>
+            {f}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 1fr' : '1fr', gap: 14 }}>
+        <div style={card}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr>
+              {['이름', '유형', '연락처', '상태', '접수일'].map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '9px 10px', fontSize: 10, color: '#78716C', fontWeight: 700, borderBottom: '1px solid #EDE8DF', textTransform: 'uppercase', letterSpacing: '.05em', fontFamily: 'Pretendard, sans-serif' }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {contacts.map(c => (
+                <tr key={c.id} onClick={() => setSelected(c)} style={{ cursor: 'pointer', background: selected?.id === c.id ? '#fff0eb' : 'transparent' }}>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #EDE8DF', fontWeight: 700, fontSize: 12, fontFamily: 'Pretendard, sans-serif' }}>{c.name}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #EDE8DF', color: '#78716C', fontSize: 11 }}>{c.inquiry_type || c.type}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #EDE8DF', color: '#78716C', fontSize: 11 }}>{c.phone}</td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #EDE8DF' }}>
+                    <span style={{ background: statusColor[c.status]?.bg, color: statusColor[c.status]?.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, fontFamily: 'Pretendard, sans-serif' }}>{c.status}</span>
+                  </td>
+                  <td style={{ padding: '10px', borderBottom: '1px solid #EDE8DF', color: '#78716C', fontSize: 11 }}>{new Date(c.created_at).toLocaleDateString('ko-KR')}</td>
+                </tr>
+              ))}
+              {contacts.length === 0 && (
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: '#78716C', fontSize: 13, fontFamily: 'Pretendard, sans-serif' }}>문의가 없습니다</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {selected && (
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h3 style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Pretendard, sans-serif' }}>문의 상세</h3>
+              <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#78716C', fontSize: 18 }}>✕</button>
+            </div>
+            {[
+              ['이름', selected.name],
+              ['이메일', selected.email],
+              ['연락처', selected.phone],
+              ['소속', selected.affiliation],
+              ['유형', selected.inquiry_type || selected.type],
+              ['관심 강의', selected.interested_course],
+              ['접수일', new Date(selected.created_at).toLocaleString('ko-KR')],
+            ].map(([k, v]) => v ? (
+              <div key={k} style={{ marginBottom: 8 }}>
+                <span style={{ fontSize: 10, color: '#78716C', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', fontFamily: 'Pretendard, sans-serif' }}>{k}</span>
+                <p style={{ fontSize: 12, color: '#1C1917', marginTop: 2, fontFamily: 'Pretendard, sans-serif' }}>{v}</p>
+              </div>
+            ) : null)}
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ fontSize: 10, color: '#78716C', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', fontFamily: 'Pretendard, sans-serif' }}>문의 내용</span>
+              <p style={{ fontSize: 12, color: '#1C1917', marginTop: 4, lineHeight: 1.7, background: '#EDE8DF', borderRadius: 8, padding: '10px 12px', fontFamily: 'Pretendard, sans-serif' }}>{selected.message}</p>
+            </div>
+            <div>
+              <label style={lbl}>상태 변경</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['미확인', '확인', '답변완료'].map(s => (
+                  <button key={s} onClick={() => changeStatus(selected.id, s)}
+                    style={{ flex: 1, background: selected.status === s ? '#C84B0F' : '#EDE8DF', color: selected.status === s ? '#FAF7F2' : '#1C1917', border: 'none', padding: '8px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 11 }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
