@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePrograms, useInstructors, useTestimonials, useSiteConfig } from '../hooks/useData'
 import type { Program, Instructor } from '../lib/supabase'
 
@@ -9,40 +9,120 @@ const esc = (s: string) =>
 const scrollTo = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
+// 금액 천단위 콤마
+const formatFee = (fee: string) => {
+  const num = parseInt(fee.replace(/[^0-9]/g, ''))
+  if (isNaN(num)) return fee
+  return num.toLocaleString('ko-KR') + '원'
+}
+
+// 기간 포맷: sessions, hours 기반으로 "4주 · 주2회 · 총 8시간" 형태
+const formatDuration = (p: Program) => {
+  const sessions = p.sessions || 0
+  const hours = p.hours || 0
+  const weeksPerSession = sessions >= 8 ? 2 : 1 // 8회 이상이면 주2회 가정
+  const weeks = weeksPerSession === 2 ? Math.ceil(sessions / 2) : sessions
+  if (sessions && hours) {
+    return `${weeks}주 · 주${weeksPerSession}회 · 총 ${hours}시간`
+  }
+  if (sessions) return `총 ${sessions}회`
+  if (hours) return `총 ${hours}시간`
+  return ''
+}
+
+// ── 현재 섹션 감지 훅 ──
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState('')
+  useEffect(() => {
+    const handler = () => {
+      const scrollY = window.scrollY + 120
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const el = document.getElementById(ids[i])
+        if (el && el.offsetTop <= scrollY) {
+          setActive(ids[i])
+          return
+        }
+      }
+      setActive(ids[0])
+    }
+    window.addEventListener('scroll', handler, { passive: true })
+    handler()
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
+  return active
+}
+
 // ── 헤더 ──
 function Header({ naverUrl, onContact, scrolled }: { naverUrl: string; onContact: () => void; scrolled: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const activeSection = useActiveSection(['hero', 'programs', 'instructors', 'contact'])
+
+  const navItems = [
+    { label: '강의소개', id: 'programs' },
+    { label: '강사진', id: 'instructors' },
+    { label: '문의하기', id: 'contact' },
+    { label: '협회소개', id: 'hero' },
+  ]
+
   return (
     <>
-      <header
-        style={{
-          position: 'sticky', top: 0, zIndex: 50, width: '100%',
-          background: scrolled ? '#FAF7F2' : 'transparent',
-          boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)' : 'none',
-          transition: 'background .3s, box-shadow .3s',
-        }}
-      >
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 50, width: '100%',
+        background: scrolled ? '#FAF7F2' : 'transparent',
+        boxShadow: scrolled ? '0 1px 0 rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)' : 'none',
+        transition: 'background .3s, box-shadow .3s',
+      }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          {/* 로고 */}
           <button onClick={() => scrollTo('hero')} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
             <span style={{ fontSize: 22 }}>🤖</span>
             <span style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', color: scrolled ? '#1C1917' : '#FAF7F2', transition: 'color .3s', fontFamily: 'Pretendard, sans-serif' }}>한국AI창의융합협회</span>
           </button>
+
+          {/* 네비게이션 */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {['강의소개|programs', '강사진|instructors', '문의하기|contact', '협회소개|hero'].map(item => {
-              const [label, id] = item.split('|')
+            {navItems.map(item => {
+              const isActive = activeSection === item.id
               return (
-                <button key={id} onClick={() => scrollTo(id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontSize: 13, fontWeight: 600, padding: '6px 12px', borderRadius: 8, color: scrolled ? '#78716C' : 'rgba(250,247,242,.8)', transition: 'color .2s' }}>
-                  {label}
+                <button
+                  key={item.id}
+                  onClick={() => scrollTo(item.id)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontFamily: 'Pretendard, sans-serif', fontSize: 13, fontWeight: isActive ? 700 : 600,
+                    padding: '6px 12px', borderRadius: 8,
+                    color: isActive
+                      ? '#C84B0F'
+                      : scrolled ? '#78716C' : 'rgba(250,247,242,.8)',
+                    transition: 'color .2s',
+                    position: 'relative',
+                  }}
+                >
+                  {item.label}
+                  {/* 활성 밑줄 */}
+                  {isActive && (
+                    <span style={{
+                      position: 'absolute', bottom: 2, left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '60%', height: 2,
+                      background: '#C84B0F', borderRadius: 2,
+                      display: 'block',
+                    }} />
+                  )}
                 </button>
               )
             })}
           </nav>
+
+          {/* 우측 버튼 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <a href={naverUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#03C75A', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', textDecoration: 'none' }}>
+            <a href={naverUrl || '#'} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#03C75A', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', textDecoration: 'none' }}>
               <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 900, fontSize: 13 }}>N</span>
               네이버 카페
             </a>
-            <button onClick={onContact} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: '8px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>
+            <button onClick={onContact}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: '8px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>
               강의 문의하기 →
             </button>
           </div>
@@ -65,11 +145,10 @@ function ProgramModal({ program, programs, onClose, onContact }: { program: Prog
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#FAF7F2', marginBottom: 10, fontFamily: 'Pretendard, sans-serif' }}>{program.title}</h2>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', color: 'rgba(250,247,242,.8)', fontSize: 11 }}>
-            <span>📅 {program.sessions}회</span>
-            <span>⏱ {program.hours}시간</span>
+            <span>📅 {formatDuration(program)}</span>
             <span>🖥 {program.format}</span>
             <span>👤 {program.target}</span>
-            <span style={{ color: '#FAF7F2', fontWeight: 700 }}>💰 {program.fee}</span>
+            <span style={{ color: '#FAF7F2', fontWeight: 700 }}>💰 {formatFee(program.fee)}</span>
           </div>
         </div>
         <div style={{ padding: 22 }}>
@@ -123,15 +202,18 @@ function ProgramModal({ program, programs, onClose, onContact }: { program: Prog
           </div>
         </div>
         <div style={{ position: 'sticky', bottom: 0, background: '#FAF7F2', borderTop: '1px solid #EDE8DF', padding: 12, borderRadius: '0 0 20px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button onClick={() => { onClose(); onContact(program.title) }} style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 12, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
+          <button onClick={() => { onClose(); onContact(program.title) }}
+            style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 12, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
             수강 문의하기
           </button>
           {program.detail_url ? (
-            <a href={program.detail_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#1C1917', color: '#FAF7F2', textDecoration: 'none', padding: 12, borderRadius: 999, fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
+            <a href={program.detail_url} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#1C1917', color: '#FAF7F2', textDecoration: 'none', padding: 12, borderRadius: 999, fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
               전체 상세 보기 ↗
             </a>
           ) : (
-            <button disabled style={{ width: '100%', background: '#EDE8DF', color: '#A8A29E', border: 'none', padding: 12, borderRadius: 999, fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'default' }}>
+            <button disabled
+              style={{ width: '100%', background: '#EDE8DF', color: '#A8A29E', border: 'none', padding: 12, borderRadius: 999, fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'default' }}>
               전체 상세 보기 (준비 중)
             </button>
           )}
@@ -188,7 +270,8 @@ function InstructorModal({ instructor, programs, onClose, onContact }: { instruc
           )}
         </div>
         <div style={{ position: 'sticky', bottom: 0, background: '#FAF7F2', borderTop: '1px solid #EDE8DF', padding: 12, borderRadius: '0 0 20px 20px' }}>
-          <button onClick={() => { onClose(); onContact() }} style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 12, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
+          <button onClick={() => { onClose(); onContact() }}
+            style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 12, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13 }}>
             이 강사 강의 문의하기
           </button>
         </div>
@@ -198,7 +281,7 @@ function InstructorModal({ instructor, programs, onClose, onContact }: { instruc
 }
 
 // ── 수강 문의 모달 ──
-function ContactModal({ programs, defaultCourse, onClose }: { programs: Program[]; defaultCourse?: string; onClose: () => void }) {
+function ContactModal({ programs, defaultCourse, onClose, adminEmail }: { programs: Program[]; defaultCourse?: string; onClose: () => void; adminEmail?: string }) {
   const [form, setForm] = useState({ name: '', phone: '', email: '', affiliation: '', course: defaultCourse || '', message: '' })
   const [agreed, setAgreed] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -209,14 +292,34 @@ function ContactModal({ programs, defaultCourse, onClose }: { programs: Program[
     if (!agreed) { alert('개인정보 수집에 동의해주세요'); return }
     setSubmitting(true)
     const { supabase } = await import('../lib/supabase')
-    await supabase.from('contacts').insert({ type: 'course', ...form, interested_course: form.course, inquiry_type: '강의 수강 문의', status: '미확인' })
+    await supabase.from('contacts').insert({
+      type: 'course',
+      name: form.name,
+      phone: form.phone,
+      email: form.email,
+      affiliation: form.affiliation,
+      interested_course: form.course,
+      inquiry_type: '강의 수강 문의',
+      message: form.message,
+      status: '미확인',
+    })
+    // 관리자 이메일 발송 (Supabase Edge Function 또는 mailto)
+    if (adminEmail) {
+      const subject = encodeURIComponent(`[KACCA 문의] ${form.name}님의 강의 수강 문의`)
+      const body = encodeURIComponent(
+        `이름: ${form.name}\n연락처: ${form.phone}\n이메일: ${form.email}\n소속: ${form.affiliation}\n관심 강의: ${form.course}\n\n문의 내용:\n${form.message}`
+      )
+      window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_blank')
+    }
     setSubmitting(false)
     setSuccess(true)
   }
 
+  const iStyle = { width: '100%', background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none' }
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#FAF7F2', borderRadius: 20, maxWidth: 480, width: '100%', animation: 'modalSlide .3s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#FAF7F2', borderRadius: 20, maxWidth: 480, width: '100%', animation: 'modalSlide .3s ease', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ background: 'linear-gradient(135deg,#C84B0F,#F5B730)', padding: '22px 24px', borderRadius: '20px 20px 0 0', position: 'relative' }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,.2)', border: 'none', color: '#fff', width: 26, height: 26, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>✕</button>
           <h3 style={{ color: '#FAF7F2', fontSize: 18, fontWeight: 900, fontFamily: 'Pretendard, sans-serif' }}>📝 강의 수강 문의</h3>
@@ -231,27 +334,100 @@ function ContactModal({ programs, defaultCourse, onClose }: { programs: Program[
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(['이름 *|name|text', '연락처 * (010-0000-0000)|phone|tel', '이메일 *|email|email', '소속·직책 (선택)|affiliation|text'] as const).map(field => {
-                const [placeholder, key, type] = field.split('|') as [string, keyof typeof form, string]
-                return <input key={key} type={type} placeholder={placeholder} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: '100%', background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none' }} />
-              })}
-              <select value={form.course} onChange={e => setForm(f => ({ ...f, course: e.target.value }))} style={{ width: '100%', background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', cursor: 'pointer' }}>
+              <input type="text" placeholder="이름 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={iStyle} />
+              <input type="tel" placeholder="연락처 * (010-0000-0000)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={iStyle} />
+              <input type="email" placeholder="이메일 *" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={iStyle} />
+              <input type="text" placeholder="소속·직책 (선택)" value={form.affiliation} onChange={e => setForm(f => ({ ...f, affiliation: e.target.value }))} style={iStyle} />
+              <select value={form.course} onChange={e => setForm(f => ({ ...f, course: e.target.value }))} style={{ ...iStyle, cursor: 'pointer' }}>
                 <option value="">관심 강의 선택 (선택)</option>
                 {programs.map(p => <option key={p.id} value={p.title}>{p.title}</option>)}
                 <option value="기타">기타</option>
               </select>
-              <textarea placeholder="문의 내용 *" rows={4} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} style={{ width: '100%', background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', resize: 'none' }} />
+              <textarea placeholder="문의 내용 *" rows={4} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} style={{ ...iStyle, resize: 'none' }} />
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: 2, accentColor: '#C84B0F' }} />
                 <span style={{ fontSize: 12, color: '#78716C', lineHeight: 1.5 }}>개인정보 수집·이용에 동의합니다<br /><span style={{ fontSize: 11, color: '#A8A29E' }}>(수집 항목: 이름·연락처·이메일 / 목적: 문의 답변 / 보유기간: 1년)</span></span>
               </label>
-              <button onClick={handleSubmit} disabled={submitting} style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 13, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, opacity: submitting ? 0.6 : 1 }}>
+              <button onClick={handleSubmit} disabled={submitting}
+                style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 13, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, opacity: submitting ? 0.6 : 1 }}>
                 {submitting ? '접수 중...' : '문의 접수하기'}
               </button>
             </div>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── 이메일 폼 ──
+function EmailForm({ programs, adminEmail }: { programs: Program[]; adminEmail?: string }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', type: '', message: '' })
+  const [count, setCount] = useState(0)
+  const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async () => {
+    if (!form.name || !form.email || !form.type || !form.message) { alert('필수 항목을 모두 입력해주세요'); return }
+    setSubmitting(true)
+    const { supabase } = await import('../lib/supabase')
+    await supabase.from('contacts').insert({
+      type: 'email',
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      inquiry_type: form.type,
+      message: form.message,
+      affiliation: '',
+      interested_course: '',
+      status: '미확인',
+    })
+    // 관리자 이메일 발송
+    if (adminEmail) {
+      const subject = encodeURIComponent(`[KACCA 문의] ${form.name}님의 ${form.type}`)
+      const body = encodeURIComponent(`이름: ${form.name}\n이메일: ${form.email}\n연락처: ${form.phone}\n유형: ${form.type}\n\n문의 내용:\n${form.message}`)
+      window.open(`mailto:${adminEmail}?subject=${subject}&body=${body}`, '_blank')
+    }
+    setSubmitting(false)
+    setSuccess(true)
+  }
+
+  const iStyle = { background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%' }
+
+  if (success) return (
+    <div style={{ background: '#FAF7F2', borderRadius: 16, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>✅</div>
+        <h3 style={{ fontSize: 18, fontWeight: 900, color: '#1C1917', marginBottom: 6, fontFamily: 'Pretendard, sans-serif' }}>문의가 접수되었습니다!</h3>
+        <p style={{ color: '#78716C', fontSize: 13 }}>1~2 영업일 내에 답변드리겠습니다.</p>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ background: '#FAF7F2', borderRadius: 16, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,.07)' }}>
+      <h3 style={{ fontWeight: 700, color: '#1C1917', marginBottom: 18, fontSize: 15, fontFamily: 'Pretendard, sans-serif' }}>📧 이메일 문의하기</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <input placeholder="이름 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={iStyle} />
+        <input type="email" placeholder="이메일 *" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={iStyle} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <input type="tel" placeholder="연락처" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={iStyle} />
+        <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{ ...iStyle, cursor: 'pointer' }}>
+          <option value="">문의 유형 *</option>
+          <option>강의 수강 문의</option><option>기업 교육 문의</option><option>강사 섭외</option><option>협업 제안</option><option>기타</option>
+        </select>
+      </div>
+      <div style={{ position: 'relative', marginBottom: 10 }}>
+        <textarea placeholder="문의 내용 *" rows={5} maxLength={500} value={form.message}
+          onChange={e => { setForm(f => ({ ...f, message: e.target.value })); setCount(e.target.value.length) }}
+          style={{ ...iStyle, resize: 'none' }} />
+        <span style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 11, color: '#78716C' }}>{count}/500</span>
+      </div>
+      <button onClick={submit} disabled={submitting}
+        style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 13, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, opacity: submitting ? 0.6 : 1 }}>
+        {submitting ? '전송 중...' : '✈ 문의 보내기'}
+      </button>
     </div>
   )
 }
@@ -270,12 +446,11 @@ export default function HomePage() {
 
   const openContact = (course?: string) => { setContactCourse(course); setContactOpen(true) }
 
-  // 스크롤 감지
-  useState(() => {
+  useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 60)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
-  })
+  }, [])
 
   const statusStyle = (status: string) =>
     status === '모집중' ? { background: '#16a34a', color: '#fff' } : { background: '#78716C', color: '#fff' }
@@ -332,25 +507,44 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             {programs.map(p => (
-              <div key={p.id} onClick={() => setSelectedProgram(p)} style={{ background: '#FAF7F2', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.07)', cursor: 'pointer', transition: 'transform .25s, box-shadow .25s' }}
+              <div key={p.id} onClick={() => setSelectedProgram(p)}
+                style={{ background: '#FAF7F2', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,.07)', cursor: 'pointer', transition: 'transform .25s, box-shadow .25s' }}
                 onMouseOver={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 32px rgba(0,0,0,.12)' }}
                 onMouseOut={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.07)' }}>
+                {/* 카드 상단 이미지 */}
                 <div style={{ height: 120, background: `linear-gradient(135deg,${p.gradient_from},${p.gradient_to})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, position: 'relative' }}>
                   {p.emoji}
                   <span style={{ position: 'absolute', top: 10, left: 10, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: 'rgba(0,0,0,.2)', color: '#fff' }}>{p.category}</span>
                   <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, ...statusStyle(p.status) }}>{p.status}</span>
                 </div>
+                {/* 카드 본문 */}
                 <div style={{ padding: 16 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 900, color: '#1C1917', marginBottom: 3, fontFamily: 'Pretendard, sans-serif' }}>{p.title}</h3>
                   <p style={{ color: '#78716C', fontSize: 12, marginBottom: 10, fontFamily: 'Pretendard, sans-serif' }}>{p.instructor_name}</p>
-                  <div style={{ borderTop: '1px solid #EDE8DF', paddingTop: 9, marginBottom: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ color: '#78716C', fontSize: 11 }}>📅 {p.sessions}회</span>
-                    <span style={{ color: '#78716C', fontSize: 11 }}>🖥 {p.format}</span>
-                    <span style={{ color: '#78716C', fontSize: 11 }}>👤 {p.target}</span>
+
+                  {/* 기간 정보 */}
+                  <div style={{ borderTop: '1px solid #EDE8DF', paddingTop: 10, marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 13 }}>📅</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1C1917', fontFamily: 'Pretendard, sans-serif' }}>{formatDuration(p)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ background: '#EDE8DF', color: '#78716C', fontSize: 11, padding: '3px 8px', borderRadius: 6, fontFamily: 'Pretendard, sans-serif' }}>🖥 {p.format}</span>
+                      <span style={{ background: '#EDE8DF', color: '#78716C', fontSize: 11, padding: '3px 8px', borderRadius: 6, fontFamily: 'Pretendard, sans-serif' }}>👤 {p.target}</span>
+                    </div>
                   </div>
+
+                  {/* 금액 + 버튼 */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#C84B0F', fontWeight: 900, fontSize: 16, fontFamily: 'Plus Jakarta Sans, sans-serif' }}>{p.fee}</span>
-                    <button style={{ background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: '7px 14px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 11 }}>자세히 보기</button>
+                    <div>
+                      <span style={{ fontSize: 10, color: '#78716C', display: 'block', marginBottom: 2, fontFamily: 'Pretendard, sans-serif' }}>수강료</span>
+                      <span style={{ color: '#C84B0F', fontWeight: 900, fontSize: 20, fontFamily: 'Plus Jakarta Sans, sans-serif', letterSpacing: '-.5px' }}>
+                        {formatFee(p.fee)}
+                      </span>
+                    </div>
+                    <button style={{ background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: '9px 16px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 12 }}>
+                      자세히 보기
+                    </button>
                   </div>
                 </div>
               </div>
@@ -373,7 +567,8 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
             {instructors.map(inst => (
-              <div key={inst.id} onClick={() => setSelectedInstructor(inst)} style={{ background: '#EDE8DF', borderRadius: 16, padding: 18, textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,.05)', transition: 'transform .25s' }}
+              <div key={inst.id} onClick={() => setSelectedInstructor(inst)}
+                style={{ background: '#EDE8DF', borderRadius: 16, padding: 18, textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,.05)', transition: 'transform .25s' }}
                 onMouseOver={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'}
                 onMouseOut={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
                 <div style={{ width: 68, height: 68, borderRadius: '50%', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 900, background: `linear-gradient(135deg,${inst.gradient_from},${inst.gradient_to})` }}>{inst.initial}</div>
@@ -445,11 +640,15 @@ export default function HomePage() {
               <div style={{ background: '#0B0A09', borderRadius: 16, padding: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAF7F2', fontSize: 16, flexShrink: 0 }}>✉</div>
-                  <div><p style={{ fontWeight: 700, color: '#FAF7F2', marginBottom: 3 }}>이메일 문의</p><p style={{ color: 'rgba(250,247,242,.55)', fontSize: 12, lineHeight: 1.5 }}>우측 폼을 통해 문의하시면 영업일 기준 1-2일 내 답변드립니다</p><p style={{ color: 'rgba(250,247,242,.35)', fontSize: 11, marginTop: 8 }}>⏰ {config.operating_hours} 운영</p></div>
+                  <div>
+                    <p style={{ fontWeight: 700, color: '#FAF7F2', marginBottom: 3 }}>이메일 문의</p>
+                    <p style={{ color: 'rgba(250,247,242,.55)', fontSize: 12, lineHeight: 1.5 }}>우측 폼을 통해 문의하시면 영업일 기준 1-2일 내 답변드립니다</p>
+                    <p style={{ color: 'rgba(250,247,242,.35)', fontSize: 11, marginTop: 8 }}>⏰ {config.operating_hours} 운영</p>
+                  </div>
                 </div>
               </div>
             </div>
-            <EmailForm programs={programs} />
+            <EmailForm programs={programs} adminEmail={config.email} />
           </div>
         </div>
       </section>
@@ -500,58 +699,7 @@ export default function HomePage() {
       {/* 모달 */}
       {selectedProgram && <ProgramModal program={selectedProgram} programs={programs} onClose={() => setSelectedProgram(null)} onContact={openContact} />}
       {selectedInstructor && <InstructorModal instructor={selectedInstructor} programs={programs} onClose={() => setSelectedInstructor(null)} onContact={() => openContact()} />}
-      {contactOpen && <ContactModal programs={programs} defaultCourse={contactCourse} onClose={() => setContactOpen(false)} />}
-    </div>
-  )
-}
-
-// ── 이메일 폼 ──
-function EmailForm({ programs }: { programs: Program[] }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', type: '', message: '' })
-  const [count, setCount] = useState(0)
-  const [success, setSuccess] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  const submit = async () => {
-    if (!form.name || !form.email || !form.type || !form.message) { alert('필수 항목을 모두 입력해주세요'); return }
-    setSubmitting(true)
-    const { supabase } = await import('../lib/supabase')
-    await supabase.from('contacts').insert({ type: 'email', name: form.name, email: form.email, phone: form.phone, inquiry_type: form.type, message: form.message, affiliation: '', interested_course: '', status: '미확인' })
-    setSubmitting(false)
-    setSuccess(true)
-  }
-
-  if (success) return (
-    <div style={{ background: '#FAF7F2', borderRadius: 16, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 44, marginBottom: 12 }}>✅</div>
-        <h3 style={{ fontSize: 18, fontWeight: 900, color: '#1C1917', marginBottom: 6, fontFamily: 'Pretendard, sans-serif' }}>문의가 접수되었습니다!</h3>
-        <p style={{ color: '#78716C', fontSize: 13 }}>1~2 영업일 내에 답변드리겠습니다.</p>
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ background: '#FAF7F2', borderRadius: 16, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,.07)' }}>
-      <h3 style={{ fontWeight: 700, color: '#1C1917', marginBottom: 18, fontSize: 15, fontFamily: 'Pretendard, sans-serif' }}>📧 이메일 문의하기</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <input placeholder="이름 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={{ background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%' }} />
-        <input type="email" placeholder="이메일 *" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={{ background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%' }} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <input type="tel" placeholder="연락처" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} style={{ background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%' }} />
-        <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{ background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%', cursor: 'pointer' }}>
-          <option value="">문의 유형 *</option>
-          <option>강의 수강 문의</option><option>기업 교육 문의</option><option>강사 섭외</option><option>협업 제안</option><option>기타</option>
-        </select>
-      </div>
-      <div style={{ position: 'relative', marginBottom: 10 }}>
-        <textarea placeholder="문의 내용 *" rows={5} maxLength={500} value={form.message} onChange={e => { setForm(f => ({ ...f, message: e.target.value })); setCount(e.target.value.length) }} style={{ background: '#EDE8DF', border: '1.5px solid transparent', borderRadius: 10, padding: '9px 13px', fontFamily: 'Pretendard, sans-serif', fontSize: 13, color: '#1C1917', outline: 'none', width: '100%', resize: 'none' }} />
-        <span style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 11, color: '#78716C' }}>{count}/500</span>
-      </div>
-      <button onClick={submit} disabled={submitting} style={{ width: '100%', background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: 13, borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 13, opacity: submitting ? 0.6 : 1 }}>
-        {submitting ? '전송 중...' : '✈ 문의 보내기'}
-      </button>
+      {contactOpen && <ContactModal programs={programs} defaultCourse={contactCourse} onClose={() => setContactOpen(false)} adminEmail={config.email} />}
     </div>
   )
 }
