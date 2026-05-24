@@ -482,7 +482,7 @@ export default function HomePage() {
             </div>
             <p style={{ color: 'rgba(250,247,242,.65)', lineHeight: 1.85, marginBottom: 30, fontSize: 16, fontFamily: 'Pretendard, sans-serif' }}>
               기초부터 실무 중심 커리큘럼으로 개인과 조직의 AI 역량을 높여드립니다.<br />
-              2026년 설립된 AI 교육 전문 협회로, 검증된 프로그램과 커뮤니티를 제공합니다.
+              AI 교육 전문 협회로, 검증된 프로그램과 커뮤니티를 제공합니다.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <button onClick={() => scrollTo('programs')} style={{ background: '#C84B0F', color: '#FAF7F2', border: 'none', padding: '12px 26px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 15 }}>강의 살펴보기 →</button>
@@ -495,12 +495,12 @@ export default function HomePage() {
             <div style={{ background: '#FAF7F2', borderRadius: 20, padding: 24, width: 190, boxShadow: '0 8px 32px rgba(0,0,0,.3)', animation: 'float 4s ease-in-out infinite' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🎓</div>
               <div style={{ fontWeight: 700, color: '#1C1917', fontSize: 16, fontFamily: 'Pretendard, sans-serif' }}>AI 교육 전문</div>
-              <div style={{ color: '#78716C', fontSize: 14, marginTop: 4 }}>2026 창립</div>
+              <div style={{ color: '#78716C', fontSize: 14, marginTop: 4 }}> </div>
             </div>
             <div style={{ background: '#FAF7F2', borderRadius: 20, padding: 24, width: 190, boxShadow: '0 8px 32px rgba(0,0,0,.3)', marginLeft: 20, animation: 'float 4s ease-in-out 1.5s infinite' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📚</div>
               <div style={{ fontWeight: 700, color: '#1C1917', fontSize: 16, fontFamily: 'Pretendard, sans-serif' }}>검증된 커리큘럼</div>
-              <div style={{ color: '#78716C', fontSize: 14, marginTop: 4 }}>4개 과정 운영</div>
+              <div style={{ color: '#78716C', fontSize: 14, marginTop: 4 }}> </div>
             </div>
           </div>
         </div>
